@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>PV Anomaly Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Nunito:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --card2: #f8fafc;
+            --border: #e2e8f0;
+            --border2: #cbd5e1;
+            --blue: #2563eb;
+            --blue-lt: #eff6ff;
+            --green: #16a34a;
+            --green-lt: #f0fdf4;
+            --red: #dc2626;
+            --red-lt: #fef2f2;
+            --orange: #ea580c;
+            --org-lt: #fff7ed;
+            --purple: #7c3aed;
+            --pur-lt: #f5f3ff;
+            --yellow: #ca8a04;
+            --yel-lt: #fefce8;
+            --text: #0f172a;
+            --text2: #475569;
+            --text3: #94a3b8;
+            --mono: 'IBM Plex Mono', monospace;
+            --head: 'Nunito', sans-serif;
+            --body: 'Inter', sans-serif;
+            --r: 10px;
+            --sh: 0 1px 3px rgba(15, 23, 42, .06), 0 4px 12px rgba(15, 23, 42, .05);
+            --sh2: 0 2px 8px rgba(15, 23, 42, .10);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--body);
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--card2)
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 4px
+        }
+
+        /* ── TOPBAR ── */
+        #topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            height: 52px;
+            min-height: 52px;
+            flex-shrink: 0;
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 4px rgba(15, 23, 42, .05);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .logo-sq {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, .3);
+        }
+
+        .logo-name {
+            font-family: var(--head);
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--text);
+            letter-spacing: .5px
+        }
+
+        .logo-tag {
+            font-family: var(--mono);
+            font-size: .55rem;
+            color: var(--text3);
+            letter-spacing: 1.5px;
+            margin-top: 1px
+        }
+
+        .pills {
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .pill {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--card2);
+            font-family: var(--mono);
+            font-size: .58rem;
+            letter-spacing: .5px;
+            color: var(--text2);
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            animation: blink 2s infinite
+        }
+
+        .dot.g {
+            background: var(--green)
+        }
+
+        .dot.b {
+            background: var(--blue)
+        }
+
+        .dot.o {
+            background: var(--orange)
+        }
+
+        .dot.gr {
+            background: var(--text3);
+            animation: none
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .3
+            }
+        }
+
+        .ctrls {
+            display: flex;
+            align-items: center;
+            gap: 7px
+        }
+
+        #clock {
+            font-family: var(--mono);
+            font-size: .78rem;
+            color: var(--blue);
+            background: var(--blue-lt);
+            padding: 3px 10px;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px
+        }
+
+        select {
+            font-family: var(--body);
+            font-size: .75rem;
+            font-weight: 500;
+            background: var(--card2);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 4px 8px;
+            outline: none;
+            cursor: pointer
+        }
+
+        .btn {
+            padding: 5px 14px;
+            border-radius: 6px;
+            border: none;
+            font-family: var(--body);
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all .15s
+        }
+
+        .btn-go {
+            background: var(--blue);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, .25)
+        }
+
+        .btn-go:hover {
+            background: #1d4ed8
+        }
+
+        .btn-st {
+            background: var(--red);
+            color: #fff
+        }
+
+        .btn-st:hover {
+            background: #b91c1c
+        }
+
+        .btn-rs {
+            background: var(--card2);
+            color: var(--text2);
+            border: 1px solid var(--border)
+        }
+
+        .btn-rs:hover {
+            background: var(--border)
+        }
+
+        /* ── LAYOUT ── */
+        #wrap {
+            display: grid;
+            grid-template-columns: 200px 1fr 224px;
+            flex: 1;
+            overflow: hidden
+        }
+
+        /* ── LEFT ── */
+        #left {
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .sec-title {
+            font-family: var(--mono);
+            font-size: .54rem;
+            color: var(--text3);
+            letter-spacing: 2px;
+            padding: 7px 12px 5px;
+            border-bottom: 1px solid var(--border);
+            background: var(--card2);
+            text-transform: uppercase;
+            flex-shrink: 0
+        }
+
+        /* Health gauge */
+        #gauge-sec {
+            padding: 12px 12px 8px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0
+        }
+
+        #g-wrap {
+            position: relative;
+            width: 128px;
+            height: 74px
+        }
+
+        #g-wrap canvas {
+            position: absolute;
+            top: 0;
+            left: 0
+        }
+
+        #g-num {
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--green);
+            transition: color .3s
+        }
+
+        #s-badge {
+            font-family: var(--head);
+            font-size: .75rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            padding: 3px 12px;
+            border-radius: 20px;
+            border: 1.5px solid;
+            transition: all .3s
+        }
+
+        .s-ok {
+            color: var(--green);
+            border-color: var(--green);
+            background: var(--green-lt)
+        }
+
+        .s-sc {
+            color: var(--red);
+            border-color: var(--red);
+            background: var(--red-lt)
+        }
+
+        .s-oc {
+            color: var(--orange);
+            border-color: var(--orange);
+            background: var(--org-lt)
+        }
+
+        .s-dg {
+            color: var(--purple);
+            border-color: var(--purple);
+            background: var(--pur-lt)
+        }
+
+        .s-sh {
+            color: var(--yellow);
+            border-color: var(--yellow);
+            background: var(--yel-lt)
+        }
+
+        /* Fault counts */
+        #faults {
+            padding: 7px 11px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            flex-shrink: 0
+        }
+
+        .f-row {
+            display: flex;
+            align-items: center;
+            padding: 4px 6px;
+            border-radius: 6px;
+            border: 1px solid transparent;
+            transition: all .2s
+        }
+
+        .f-row.active {
+            background: var(--card2);
+            border-color: var(--border)
+        }
+
+        .f-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            margin-right: 7px;
+            flex-shrink: 0
+        }
+
+        .f-name {
+            font-size: .72rem;
+            color: var(--text2);
+            font-weight: 500;
+            flex: 1
+        }
+
+        .f-val {
+            font-family: var(--mono);
+            font-size: .73rem;
+            color: var(--text);
+            min-width: 28px;
+            text-align: right
+        }
+
+        .f-pct {
+            font-family: var(--mono);
+            font-size: .58rem;
+            color: var(--text3);
+            min-width: 34px;
+            text-align: right
+        }
+
+        /* Sensor table */
+        #snr-sec {
+            padding: 7px 11px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        table.snr-tbl {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        table.snr-tbl tr td {
+            padding: 3px 0;
+            font-size: .7rem
+        }
+
+        table.snr-tbl tr td:first-child {
+            font-family: var(--mono);
+            color: var(--text3);
+            font-size: .62rem;
+            padding-right: 6px;
+            white-space: nowrap
+        }
+
+        table.snr-tbl tr td:last-child {
+            font-family: var(--mono);
+            color: var(--blue);
+            font-weight: 500;
+            text-align: right
+        }
+
+        /* Progress */
+        #prog-sec {
+            padding: 7px 11px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0
+        }
+
+        .prog-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px
+        }
+
+        .prog-top span {
+            font-family: var(--mono);
+            font-size: .57rem;
+            color: var(--text3)
+        }
+
+        .prog-bg {
+            height: 5px;
+            background: var(--card2);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid var(--border)
+        }
+
+        .prog-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--blue), #60a5fa);
+            border-radius: 3px;
+            transition: width .4s;
+            width: 0%
+        }
+
+        /* Log */
+        #log-sec {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0
+        }
+
+        #log {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px 7px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px
+        }
+
+        .le {
+            font-family: var(--mono);
+            font-size: .57rem;
+            padding: 3px 6px;
+            border-radius: 4px;
+            border-left: 2px solid;
+            line-height: 1.45;
+            word-break: break-all;
+            animation: fadeIn .2s
+        }
+
+        .le-ok {
+            border-color: var(--border2);
+            color: var(--text3);
+            background: var(--card2)
+        }
+
+        .le-sc {
+            border-color: var(--red);
+            color: var(--red);
+            background: var(--red-lt)
+        }
+
+        .le-oc {
+            border-color: var(--orange);
+            color: var(--orange);
+            background: var(--org-lt)
+        }
+
+        .le-dg {
+            border-color: var(--purple);
+            color: var(--purple);
+            background: var(--pur-lt)
+        }
+
+        .le-sh {
+            border-color: var(--yellow);
+            color: #92400e;
+            background: var(--yel-lt)
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(3px)
+            }
+
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        /* ── CENTER ── */
+        #center {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--bg)
+        }
+
+        /* KPI row — 6 cards matching dataset columns */
+        #kpis {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, .04)
+        }
+
+        .kpi {
+            padding: 9px 11px;
+            border-right: 1px solid var(--border);
+            position: relative;
+            overflow: hidden
+        }
+
+        .kpi:last-child {
+            border-right: none
+        }
+
+        .kpi::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 10px;
+            right: 10px;
+            height: 2px;
+            border-radius: 2px 2px 0 0
+        }
+
+        .k-i1::after {
+            background: #2563eb
+        }
+
+        .k-i2::after {
+            background: #0891b2
+        }
+
+        .k-v1::after {
+            background: #16a34a
+        }
+
+        .k-v2::after {
+            background: #059669
+        }
+
+        .k-ir::after {
+            background: #ca8a04
+        }
+
+        .k-pt::after {
+            background: #dc2626
+        }
+
+        .kpi-lbl {
+            font-family: var(--mono);
+            font-size: .54rem;
+            color: var(--text3);
+            letter-spacing: 1px;
+            margin-bottom: 3px
+        }
+
+        .kpi-val {
+            font-family: var(--mono);
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text);
+            line-height: 1
+        }
+
+        .kpi-unit {
+            font-size: .55rem;
+            color: var(--text3);
+            margin-left: 2px
+        }
+
+        .kpi-sub {
+            font-size: .58rem;
+            color: var(--text3);
+            margin-top: 2px
+        }
+
+        /* Charts */
+        #charts {
+            flex: 1;
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            overflow: hidden;
+            padding: 9px;
+            gap: 9px
+        }
+
+        .ccard {
+            background: var(--card);
+            border-radius: var(--r);
+            border: 1px solid var(--border);
+            box-shadow: var(--sh);
+            padding: 9px 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        .ch-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            flex-shrink: 0
+        }
+
+        .ch-lbl {
+            font-family: var(--mono);
+            font-size: .56rem;
+            color: var(--text3);
+            letter-spacing: 1.5px
+        }
+
+        .ch-badge {
+            font-family: var(--mono);
+            font-size: .5rem;
+            letter-spacing: .5px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            border: 1px solid
+        }
+
+        .badge-ok {
+            color: var(--green);
+            border-color: #bbf7d0;
+            background: var(--green-lt)
+        }
+
+        .badge-fault {
+            color: var(--red);
+            border-color: #fecaca;
+            background: var(--red-lt)
+        }
+
+        .cw {
+            flex: 1;
+            position: relative;
+            min-height: 0
+        }
+
+        .cw canvas {
+            position: absolute;
+            inset: 0;
+            width: 100% !important;
+            height: 100% !important
+        }
+
+        /* Bottom mini charts */
+        #bot {
+            padding: 0 9px 9px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 9px;
+            flex-shrink: 0;
+            height: 145px
+        }
+
+        .bcard {
+            background: var(--card);
+            border-radius: var(--r);
+            border: 1px solid var(--border);
+            box-shadow: var(--sh);
+            padding: 7px 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden
+        }
+
+        /* ── RIGHT ── */
+        #right {
+            background: var(--card);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto
+        }
+
+        /* Alert */
+        #toast-container {
+            position: fixed; top: 60px; right: 20px; z-index: 9999;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        .toast {
+            background: #fff; border-left: 4px solid var(--red); box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 12px 14px; border-radius: 6px; width: 280px; display: flex; align-items: center; gap: 10px;
+            animation: slideInRight 0.3s ease forwards; pointer-events: auto; position: relative; overflow: hidden;
+        }
+        .t-icon { font-size: 1.3rem; }
+        .t-title { font-family: var(--head); font-weight: 800; font-size: .8rem; color: var(--red); margin-bottom: 2px; }
+        .t-sub { font-family: var(--mono); font-size: .65rem; color: var(--text2); }
+        .t-cls { position: absolute; top: 6px; right: 8px; cursor: pointer; color: var(--text3); font-size: 14px; }
+        .t-cls:hover { color: var(--text); }
+        .toast.hide { animation: fadeOutRight 0.3s ease forwards; }
+        @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(110%); opacity: 0; } }
+
+        #alert {
+            margin: 10px;
+            border-radius: var(--r);
+            border: 1.5px solid var(--green);
+            background: var(--green-lt);
+            padding: 13px 11px;
+            text-align: center;
+            transition: all .3s;
+            flex-shrink: 0
+        }
+
+        .al-icon {
+            font-size: 1.8rem;
+            margin-bottom: 2px
+        }
+
+        #al-title {
+            font-family: var(--head);
+            font-size: .95rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            color: var(--green);
+            transition: color .3s
+        }
+
+        #al-sub {
+            font-family: var(--mono);
+            font-size: .58rem;
+            color: var(--text2);
+            margin-top: 3px
+        }
+
+        #al-score {
+            font-family: var(--mono);
+            font-size: .56rem;
+            color: var(--text3);
+            margin-top: 6px;
+            padding-top: 5px;
+            border-top: 1px solid rgba(0, 0, 0, .06)
+        }
+
+        /* Confidence */
+        #conf {
+            padding: 0 11px 7px;
+            flex-shrink: 0
+        }
+
+        .co-row {
+            margin-bottom: 5px
+        }
+
+        .co-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px
+        }
+
+        .co-name {
+            font-size: .68rem;
+            color: var(--text2);
+            font-weight: 600
+        }
+
+        .co-pct {
+            font-family: var(--mono);
+            font-size: .6rem;
+            color: var(--text3)
+        }
+
+        .co-bg {
+            height: 5px;
+            background: var(--card2);
+            border-radius: 3px;
+            overflow: hidden;
+            border: 1px solid var(--border)
+        }
+
+        .co-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .5s cubic-bezier(.4, 0, .2, 1)
+        }
+
+        /* Stats */
+        #stats-grid {
+            padding: 0 11px 7px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            flex-shrink: 0
+        }
+
+        .sb {
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 6px 8px
+        }
+
+        .sb-lbl {
+            font-family: var(--mono);
+            font-size: .54rem;
+            color: var(--text3);
+            letter-spacing: .5px
+        }
+
+        .sb-val {
+            font-family: var(--mono);
+            font-size: 1rem;
+            font-weight: 500;
+            margin-top: 1px
+        }
+
+        /* True vs Pred */
+        #tvp {
+            margin: 0 11px 8px;
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+            flex-shrink: 0
+        }
+
+        .tvp-r {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .tvp-r:last-child {
+            border-bottom: none
+        }
+
+        .tvp-k {
+            font-family: var(--mono);
+            font-size: .58rem;
+            color: var(--text3)
+        }
+
+        .tvp-v {
+            font-family: var(--mono);
+            font-size: .65rem;
+            font-weight: 500
+        }
+
+        /* IF ring */
+        #ring-sec {
+            padding: 0 11px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0
+        }
+
+        #rw {
+            position: relative;
+            width: 82px;
+            height: 82px
+        }
+
+        #rw canvas {
+            position: absolute;
+            inset: 0
+        }
+
+        #r-num {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--mono);
+            font-size: .9rem;
+            font-weight: 500;
+            color: var(--orange);
+            transition: color .3s
+        }
+
+        .r-lbl {
+            font-family: var(--mono);
+            font-size: .54rem;
+            color: var(--text3);
+            letter-spacing: 1px
+        }
+
+        /* Imbalance row */
+        #imb-sec {
+            margin: 0 11px 8px;
+            background: var(--card2);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 7px 10px;
+            flex-shrink: 0
+        }
+
+        .imb-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 0
+        }
+
+        .imb-k {
+            font-family: var(--mono);
+            font-size: .58rem;
+            color: var(--text3)
+        }
+
+        .imb-v {
+            font-family: var(--mono);
+            font-size: .65rem;
+            font-weight: 500;
+            color: var(--orange)
+        }
+    </style>
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <!-- TOPBAR -->
+    <div id="topbar">
+        <div class="logo">
+            <div class="logo-sq">☀️</div>
+            <div>
+                <div class="logo-name">PV Anomaly Monitor</div>
+                <div class="logo-tag">HYBRID IF · LSTM · 5-CLASS DETECTION</div>
+            </div>
+        </div>
+
+        <div class="pills">
+            <div class="pill">
+                <div class="dot g"></div>MQTT LIVE
+            </div>
+            <div class="pill">
+                <div class="dot b" id="m-dot"></div><span id="m-pill">CHECKING…</span>
+            </div>
+            <div class="pill">
+                <div class="dot o"></div>TRAIN 70 · VAL 20 · TEST 10
+            </div>
+            <div class="pill">
+                <div class="dot gr" id="s-dot"></div><span id="s-pill">IDLE</span>
+            </div>
+        </div>
+
+        <div class="ctrls">
+            <div id="clock">00:00:00</div>
+            <select id="delay">
+                <option value="100">100ms (Ultra fast)</option>
+                <option value="300" selected>300ms (Fast)</option>
+                <option value="700">700ms (Normal)</option>
+                <option value="1500">1.5s (Slow)</option>
+            </select>
+            <button class="btn btn-go" id="b-go" onclick="startStream()">▶ START</button>
+            <button class="btn btn-st" id="b-st" onclick="stopStream()" style="display:none">■ STOP</button>
+            <button class="btn btn-rs" onclick="window.location.href='/api/download'">⬇ CSV</button>
+            <button class="btn btn-rs" onclick="resetStream()">↺ RESET</button>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div id="wrap">
+
+        <!-- LEFT -->
+        <div id="left">
+            <div class="sec-title">// PLANT HEALTH INDEX</div>
+            <div id="gauge-sec">
+                <div id="g-wrap">
+                    <canvas id="g-c" width="128" height="74"></canvas>
+                    <div id="g-num">100</div>
+                </div>
+                <div style="font-family:var(--mono);font-size:.54rem;color:var(--text3);letter-spacing:2px">HEALTH INDEX
+                </div>
+                <div id="s-badge" class="s-ok">NORMAL</div>
+            </div>
+
+            <div class="sec-title">// FAULT BREAKDOWN</div>
+            <div id="faults">
+                <div class="f-row" id="fr0">
+                    <div class="f-dot" style="background:var(--green)"></div>
+                    <div class="f-name">Normal</div>
+                    <div class="f-val" id="fv0">0</div>
+                    <div class="f-pct" id="fp0">--</div>
+                </div>
+                <div class="f-row" id="fr1">
+                    <div class="f-dot" style="background:var(--red)"></div>
+                    <div class="f-name">Short Circuit</div>
+                    <div class="f-val" id="fv1">0</div>
+                    <div class="f-pct" id="fp1">--</div>
+                </div>
+                <div class="f-row" id="fr2">
+                    <div class="f-dot" style="background:var(--orange)"></div>
+                    <div class="f-name">Open Circuit</div>
+                    <div class="f-val" id="fv2">0</div>
+                    <div class="f-pct" id="fp2">--</div>
+                </div>
+                <div class="f-row" id="fr3">
+                    <div class="f-dot" style="background:var(--purple)"></div>
+                    <div class="f-name">Degradation</div>
+                    <div class="f-val" id="fv3">0</div>
+                    <div class="f-pct" id="fp3">--</div>
+                </div>
+                <div class="f-row" id="fr4">
+                    <div class="f-dot" style="background:var(--yellow)"></div>
+                    <div class="f-name">Shading</div>
+                    <div class="f-val" id="fv4">0</div>
+                    <div class="f-pct" id="fp4">--</div>
+                </div>
+            </div>
+
+            <div class="sec-title">// DATASET COLUMNS — LIVE</div>
+            <div id="snr-sec">
+                <table class="snr-tbl">
+                    <tr>
+                        <td>idc_1</td>
+                        <td><span id="s-i1">--</span> A</td>
+                    </tr>
+                    <tr>
+                        <td>idc_2</td>
+                        <td><span id="s-i2">--</span> A</td>
+                    </tr>
+                    <tr>
+                        <td>vdc_1</td>
+                        <td><span id="s-v1">--</span> V</td>
+                    </tr>
+                    <tr>
+                        <td>vdc_2</td>
+                        <td><span id="s-v2">--</span> V</td>
+                    </tr>
+                    <tr>
+                        <td>irra</td>
+                        <td><span id="s-ir">--</span> W/m²</td>
+                    </tr>
+                    <tr>
+                        <td>pvtemp</td>
+                        <td><span id="s-pt">--</span> °C</td>
+                    </tr>
+                    <tr>
+                        <td>row #</td>
+                        <td><span id="s-rw">--</span> / <span id="s-tt">--</span></td>
+                    </tr>
+                </table>
+            </div>
+
+            <div id="prog-sec">
+                <div class="prog-top"><span>DATASET PROGRESS</span><span id="p-pct">0.0%</span></div>
+                <div class="prog-bg">
+                    <div class="prog-fill" id="p-fill"></div>
+                </div>
+            </div>
+
+            <div class="sec-title">// MQTT STREAM LOG</div>
+            <div id="log-sec">
+                <div id="log">
+                    <div class="le le-ok" style="color:var(--text3);font-style:italic">Awaiting stream start…</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENTER -->
+        <div id="center">
+
+            <!-- 6 KPI cards — one per dataset column -->
+            <div id="kpis">
+                <div class="kpi k-i1">
+                    <div class="kpi-lbl">IDC_1</div>
+                    <div><span class="kpi-val" id="k-i1">--</span><span class="kpi-unit">A</span></div>
+                    <div class="kpi-sub">String 1 Current</div>
+                </div>
+                <div class="kpi k-i2">
+                    <div class="kpi-lbl">IDC_2</div>
+                    <div><span class="kpi-val" id="k-i2">--</span><span class="kpi-unit">A</span></div>
+                    <div class="kpi-sub">String 2 Current</div>
+                </div>
+                <div class="kpi k-v1">
+                    <div class="kpi-lbl">VDC_1</div>
+                    <div><span class="kpi-val" id="k-v1">--</span><span class="kpi-unit">V</span></div>
+                    <div class="kpi-sub">String 1 Voltage</div>
+                </div>
+                <div class="kpi k-v2">
+                    <div class="kpi-lbl">VDC_2</div>
+                    <div><span class="kpi-val" id="k-v2">--</span><span class="kpi-unit">V</span></div>
+                    <div class="kpi-sub">String 2 Voltage</div>
+                </div>
+                <div class="kpi k-ir">
+                    <div class="kpi-lbl">IRRADIANCE</div>
+                    <div><span class="kpi-val" id="k-ir">--</span><span class="kpi-unit">W/m²</span></div>
+                    <div class="kpi-sub">Solar irradiance</div>
+                </div>
+                <div class="kpi k-pt">
+                    <div class="kpi-lbl">PV TEMP</div>
+                    <div><span class="kpi-val" id="k-pt">--</span><span class="kpi-unit">°C</span></div>
+                    <div class="kpi-sub">Module temp</div>
+                </div>
+            </div>
+
+            <!-- Main charts -->
+            <div id="charts">
+                <!-- Chart 1: idc_1 vs idc_2 -->
+                <div class="ccard">
+                    <div class="ch-head">
+                        <div class="ch-lbl">// IDC_1 vs IDC_2 — STRING CURRENTS (A)</div>
+                        <div class="ch-badge badge-ok" id="c1-badge">LIVE</div>
+                    </div>
+                    <div class="cw"><canvas id="c-idc"></canvas></div>
+                </div>
+                <!-- Chart 2: vdc_1 vs vdc_2 -->
+                <div class="ccard">
+                    <div class="ch-head">
+                        <div class="ch-lbl">// VDC_1 vs VDC_2 — STRING VOLTAGES (V)</div>
+                        <div class="ch-badge badge-ok" id="c2-badge">LIVE</div>
+                    </div>
+                    <div class="cw"><canvas id="c-vdc"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Bottom mini charts -->
+            <div id="bot">
+                <div class="bcard">
+                    <div class="ch-head" style="margin-bottom:3px">
+                        <div class="ch-lbl">// IRRADIANCE (W/m²)</div>
+                    </div>
+                    <div class="cw"><canvas id="c-irr"></canvas></div>
+                </div>
+                <div class="bcard">
+                    <div class="ch-head" style="margin-bottom:3px">
+                        <div class="ch-lbl">// PV TEMP (°C)</div>
+                    </div>
+                    <div class="cw"><canvas id="c-tmp"></canvas></div>
+                </div>
+ 
+                <div class="bcard">
+                    <div class="ch-head" style="margin-bottom:3px">
+                        <div class="ch-lbl">// PREDICTED CLASS</div>
+                    </div>
+                    <div class="cw"><canvas id="c-cls"></canvas></div>
+                </div>
+            </div>
+
+        </div><!-- /center -->
+
+        <!-- RIGHT -->
+        <div id="right">
+            <div class="sec-title">// ANOMALY ALERT</div>
+
+            <div id="alert">
+                <div class="al-icon" id="al-icon">✅</div>
+                <div id="al-title">NORMAL</div>
+                <div id="al-sub">All readings within expected range</div>
+                <div id="al-score">IF: 0.0000 · Window: 0 / 30</div>
+            </div>
+
+            <div class="sec-title">// CLASS CONFIDENCE</div>
+            <div id="conf">
+                <div class="co-row">
+                    <div class="co-top"><span class="co-name">Normal</span><span class="co-pct" id="co-p0">0%</span>
+                    </div>
+                    <div class="co-bg">
+                        <div class="co-fill" id="co-b0" style="background:var(--green);width:0%"></div>
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-top"><span class="co-name">Short Circuit</span><span class="co-pct"
+                            id="co-p1">0%</span></div>
+                    <div class="co-bg">
+                        <div class="co-fill" id="co-b1" style="background:var(--red);width:0%"></div>
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-top"><span class="co-name">Open Circuit</span><span class="co-pct"
+                            id="co-p2">0%</span></div>
+                    <div class="co-bg">
+                        <div class="co-fill" id="co-b2" style="background:var(--orange);width:0%"></div>
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-top"><span class="co-name">Degradation</span><span class="co-pct"
+                            id="co-p3">0%</span></div>
+                    <div class="co-bg">
+                        <div class="co-fill" id="co-b3" style="background:var(--purple);width:0%"></div>
+                    </div>
+                </div>
+                <div class="co-row">
+                    <div class="co-top"><span class="co-name">Shading</span><span class="co-pct" id="co-p4">0%</span>
+                    </div>
+                    <div class="co-bg">
+                        <div class="co-fill" id="co-b4" style="background:var(--yellow);width:0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sec-title">// SESSION STATS</div>
+            <div id="stats-grid">
+                <div class="sb">
+                    <div class="sb-lbl">PROCESSED</div>
+                    <div class="sb-val" id="st-tot" style="color:var(--blue)">0</div>
+                </div>
+                <div class="sb">
+                    <div class="sb-lbl">ANOMALIES</div>
+                    <div class="sb-val" id="st-anom" style="color:var(--red)">0</div>
+                </div>
+                <div class="sb">
+                    <div class="sb-lbl">NORMAL</div>
+                    <div class="sb-val" id="st-norm" style="color:var(--green)">0</div>
+                </div>
+                <div class="sb">
+                    <div class="sb-lbl">FAULT RATE</div>
+                    <div class="sb-val" id="st-rate" style="color:var(--orange)">0.0%</div>
+                </div>
+            </div>
+
+ 
+
+ 
+ 
+
+        </div><!-- /right -->
+
+    </div><!-- /wrap -->
+
+    <script>
+        // ════════════════════════════════════
+        // CONSTANTS
+        // ════════════════════════════════════
+        const MAX = 100;
+        const CN = ['Normal', 'Short Circuit', 'Open Circuit', 'Degradation', 'Shading'];
+        const CC = ['#16a34a', '#dc2626', '#ea580c', '#7c3aed', '#ca8a04'];
+        const LCLS = ['le-ok', 'le-sc', 'le-oc', 'le-dg', 'le-sh'];
+        const BCLS = ['s-ok', 's-sc', 's-oc', 's-dg', 's-sh'];
+        const AL = [
+            { icon: '✅', bg: 'var(--green-lt)', bc: 'var(--green)', title: 'NORMAL', sub: 'All readings within expected range' },
+            { icon: '⚡', bg: 'var(--red-lt)', bc: 'var(--red)', title: 'SHORT CIRCUIT', sub: 'High current detected on string' },
+            { icon: '🔌', bg: 'var(--org-lt)', bc: 'var(--orange)', 'title': 'OPEN CIRCUIT', sub: 'Current drop — string disconnected' },
+            { icon: '📉', bg: 'var(--pur-lt)', bc: 'var(--purple)', 'title': 'DEGRADATION', sub: 'Performance below expected output' },
+            { icon: '🌤', bg: 'var(--yel-lt)', bc: 'var(--yellow)', 'title': 'SHADING', sub: 'Reduced irradiance on module' },
+        ];
+
+        // Clock
+        setInterval(() => { document.getElementById('clock').textContent = new Date().toTimeString().slice(0, 8); }, 1000);
+
+        // ════════════════════════════════════
+        // GAUGE & RING
+        // ════════════════════════════════════
+        const gCtx = document.getElementById('g-c').getContext('2d');
+        const gauge = new Chart(gCtx, {
+            type: 'doughnut',
+            data: { datasets: [{ data: [100, 0], backgroundColor: ['#16a34a', '#f1f5f9'], borderWidth: 0, cutout: '72%', circumference: 180, rotation: -90 }] },
+            options: { responsive: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 400 } }
+        });
+        function setGauge(v, col) {
+            gauge.data.datasets[0].data = [v, 100 - v];
+            gauge.data.datasets[0].backgroundColor[0] = col;
+            gauge.update();
+            document.getElementById('g-num').textContent = Math.round(v);
+            document.getElementById('g-num').style.color = col;
+        }
+
+ 
+
+        // ════════════════════════════════════
+        // CHARTS  (all using actual dataset cols)
+        // ════════════════════════════════════
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = '#f1f5f9';
+
+        function mkLine(id, ds, yo = {}) {
+            return new Chart(document.getElementById(id).getContext('2d'), {
+                type: 'line',
+                data: { labels: [], datasets: ds },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: ds.length > 1, labels: { boxWidth: 9, font: { size: 10 }, color: '#475569', usePointStyle: true } },
+                        tooltip: {
+                            backgroundColor: 'rgba(255,255,255,.97)', titleColor: '#0f172a', bodyColor: '#475569',
+                            borderColor: '#e2e8f0', borderWidth: 1, padding: 7, cornerRadius: 7
+                        }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            ...yo, grid: { color: 'rgba(226,232,240,.7)' },
+                            ticks: { font: { family: "'IBM Plex Mono'", size: 10 }, color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // idc_1 vs idc_2
+        const cIdc = mkLine('c-idc', [
+            { label: 'idc_1 (A)', data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,.07)', borderWidth: 2, pointRadius: 0, tension: .3, fill: true },
+            { label: 'idc_2 (A)', data: [], borderColor: '#0891b2', borderWidth: 2, pointRadius: 0, tension: .3 }
+        ], { beginAtZero: true });
+
+        // vdc_1 vs vdc_2
+        const cVdc = mkLine('c-vdc', [
+            { label: 'vdc_1 (V)', data: [], borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,.06)', borderWidth: 2, pointRadius: 0, tension: .3, fill: true },
+            { label: 'vdc_2 (V)', data: [], borderColor: '#059669', borderWidth: 2, pointRadius: 0, tension: .3 }
+        ], { beginAtZero: true });
+
+        // irradiance
+        const cIrr = mkLine('c-irr', [
+            { data: [], borderColor: '#ca8a04', backgroundColor: 'rgba(202,138,4,.07)', borderWidth: 1.5, pointRadius: 0, tension: .3, fill: true }
+        ], { beginAtZero: true });
+
+        // pvtemp
+        const cTmp = mkLine('c-tmp', [
+            { data: [], borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,.06)', borderWidth: 1.5, pointRadius: 0, tension: .3, fill: true }
+        ], { beginAtZero: true });
+
+ 
+
+        // Predicted class
+        const cCls = mkLine('c-cls', [
+            {
+                data: [], borderColor: '#7c3aed', backgroundColor: 'rgba(124,58,237,.07)', borderWidth: 2,
+                pointRadius: 3, pointBackgroundColor: d => CC[d.raw] || '#7c3aed', tension: .1, fill: true, stepped: 'before'
+            }
+        ], { min: 0, max: 4, ticks: { stepSize: 1, callback: v => CN[v] || v } });
+
+        function push(chart, label, ...vals) {
+            chart.data.labels.push(label);
+            vals.forEach((v, i) => chart.data.datasets[i].data.push(v));
+            if (chart.data.labels.length > MAX) { chart.data.labels.shift(); chart.data.datasets.forEach(d => d.data.shift()); }
+            chart.update('none');
+        }
+
+        // ════════════════════════════════════
+        // STATUS
+        // ════════════════════════════════════
+        async function checkStatus() {
+            try {
+                const r = await fetch('/api/status'), d = await r.json();
+                document.getElementById('m-pill').textContent = d.model_loaded ? 'HYBRID MODEL READY' : 'SIMULATION MODE';
+                document.getElementById('m-dot').className = 'dot ' + (d.model_loaded ? 'g' : 'o');
+                document.getElementById('s-tt').textContent = d.total_rows.toLocaleString();
+            } catch (e) { }
+        }
+        checkStatus();
+
+        // ════════════════════════════════════
+        // STREAM CONTROL
+        // ════════════════════════════════════
+        let evtSrc = null;
+
+        async function startStream() {
+            const ms = parseInt(document.getElementById('delay').value);
+            await fetch('/api/stream/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ delay_ms: ms }) });
+            document.getElementById('b-go').style.display = 'none';
+            document.getElementById('b-st').style.display = 'flex';
+            document.getElementById('s-dot').className = 'dot g';
+            document.getElementById('s-pill').textContent = 'STREAMING';
+            document.getElementById('log').innerHTML = '';
+            connectSSE();
+        }
+
+        async function stopStream() {
+            await fetch('/api/stream/stop', { method: 'POST' });
+            if (evtSrc) { evtSrc.close(); evtSrc = null; }
+            document.getElementById('b-go').style.display = 'flex';
+            document.getElementById('b-st').style.display = 'none';
+            document.getElementById('s-dot').className = 'dot gr';
+            document.getElementById('s-pill').textContent = 'PAUSED';
+        }
+
+        async function resetStream() {
+            await fetch('/api/stream/reset', { method: 'POST' });
+            if (evtSrc) { evtSrc.close(); evtSrc = null; }
+            document.getElementById('b-go').style.display = 'flex';
+            document.getElementById('b-st').style.display = 'none';
+            document.getElementById('s-dot').className = 'dot gr';
+            document.getElementById('s-pill').textContent = 'IDLE';
+            [cIdc, cVdc, cIrr, cTmp, cCls].forEach(c => {
+                c.data.labels = []; c.data.datasets.forEach(d => d.data = []); c.update('none');
+            });
+            for (let i = 0; i < 5; i++) {
+                document.getElementById('fv' + i).textContent = '0';
+                document.getElementById('fp' + i).textContent = '--';
+                document.getElementById('fr' + i).classList.remove('active');
+            }
+            ['st-tot', 'st-anom', 'st-norm'].forEach(id => document.getElementById(id).textContent = '0');
+            document.getElementById('st-rate').textContent = '0.0%';
+            document.getElementById('p-fill').style.width = '0%';
+            document.getElementById('p-pct').textContent = '0.0%';
+            document.getElementById('log').innerHTML = '<div class="le le-ok" style="color:var(--text3);font-style:italic">Reset. Ready to stream.</div>';
+            setGauge(100, '#16a34a');
+            setAlert(0, { if_score: 0, window_size: 0 });
+        }
+
+        // ════════════════════════════════════
+        // SSE
+        // ════════════════════════════════════
+        function connectSSE() {
+            if (evtSrc) evtSrc.close();
+            evtSrc = new EventSource('/api/events');
+            evtSrc.onmessage = e => {
+                try {
+                    const d = JSON.parse(e.data);
+                    if (d.heartbeat) return;
+                    if (d.stream_done) { onDone(d); return; }
+                    update(d);
+                } catch (err) { }
+            };
+        }
+
+        // ════════════════════════════════════
+        // MAIN UPDATE
+        // ════════════════════════════════════
+        function update(d) {
+            const t = d.timestamp, cls = d.pred_class;
+
+            // KPI cards — exact dataset columns
+            document.getElementById('k-i1').textContent = d.idc_1.toFixed(4);
+            document.getElementById('k-i2').textContent = d.idc_2.toFixed(4);
+            document.getElementById('k-v1').textContent = d.vdc_1.toFixed(2);
+            document.getElementById('k-v2').textContent = d.vdc_2.toFixed(2);
+            document.getElementById('k-ir').textContent = d.irra.toFixed(1);
+            document.getElementById('k-pt').textContent = d.pvtemp.toFixed(1);
+
+            // Left sensor table
+            document.getElementById('s-i1').textContent = d.idc_1.toFixed(4);
+            document.getElementById('s-i2').textContent = d.idc_2.toFixed(4);
+            document.getElementById('s-v1').textContent = d.vdc_1.toFixed(4);
+            document.getElementById('s-v2').textContent = d.vdc_2.toFixed(4);
+            document.getElementById('s-ir').textContent = d.irra.toFixed(1);
+            document.getElementById('s-pt').textContent = d.pvtemp.toFixed(1);
+            document.getElementById('s-rw').textContent = (d.row_index + 1).toLocaleString();
+
+            // Charts — push actual sensor values
+            push(cIdc, t, d.idc_1, d.idc_2);
+            push(cVdc, t, d.vdc_1, d.vdc_2);
+            push(cIrr, t, d.irra);
+            push(cTmp, t, d.pvtemp);
+            push(cCls, t, cls);
+
+            // Health gauge
+            const hc = d.health_index > 70 ? '#16a34a' : d.health_index > 40 ? '#ea580c' : '#dc2626';
+            setGauge(d.health_index, hc);
+
+            // Alert
+            setAlert(cls, d);
+            if (d.is_anomaly) {
+                const now = Date.now();
+                if (!window._lastToastTime || now - window._lastToastTime > 5000) {
+                    showToast("ANOMALY DETECTED!", `Class: ${CN[cls]} | Row: ${d.row_index + 1}`);
+                    window._lastToastTime = now;
+                }
+            }
+
+            // Badge on charts
+            const bv = d.is_anomaly ? 'FAULT' : 'LIVE';
+            const bc = d.is_anomaly ? 'badge-fault' : 'badge-ok';
+            ['c1-badge', 'c2-badge'].forEach(id => {
+                const el = document.getElementById(id);
+                el.textContent = bv; el.className = 'ch-badge ' + bc;
+            });
+
+            // Confidence
+            if (d.confidence && d.confidence.length === 5) {
+                d.confidence.forEach((v, i) => {
+                    const p = Math.round(v * 100);
+                    document.getElementById('co-p' + i).textContent = p + '%';
+                    document.getElementById('co-b' + i).style.width = p + '%';
+                });
+            }
+
+            // Stats
+            if (d.stats) {
+                const s = d.stats;
+                document.getElementById('st-tot').textContent = s.total.toLocaleString();
+                document.getElementById('st-anom').textContent = s.anomaly.toLocaleString();
+                document.getElementById('st-norm').textContent = s.normal.toLocaleString();
+                document.getElementById('st-rate').textContent = s.total > 0 ? ((s.anomaly / s.total) * 100).toFixed(1) + '%' : '0.0%';
+                const cm = { normal: s.normal, short: s.short || 0, open: s.open || 0, degrad: s.degrad || 0, shading: s.shading || 0 };
+                const order = ['normal', 'short', 'open', 'degrad', 'shading'];
+                order.forEach((k, i) => {
+                    const v = cm[k] || 0;
+                    document.getElementById('fv' + i).textContent = v.toLocaleString();
+                    document.getElementById('fp' + i).textContent = s.total > 0 ? ((v / s.total) * 100).toFixed(1) + '%' : '--';
+                });
+            }
+
+            // Active fault highlight
+            for (let i = 0; i < 5; i++) document.getElementById('fr' + i).classList.toggle('active', i === cls);
+
+            // Progress
+            document.getElementById('p-fill').style.width = (d.progress || 0) + '%';
+            document.getElementById('p-pct').textContent = (d.progress || 0).toFixed(1) + '%';
+
+ 
+
+ 
+
+            // Log
+            addLog(d);
+        }
+
+        function setAlert(cls, d) {
+            const cfg = AL[cls] || AL[0];
+            const box = document.getElementById('alert');
+            box.style.borderColor = cfg.bc;
+            box.style.background = cfg.bg;
+            document.getElementById('al-icon').textContent = cfg.icon;
+            document.getElementById('al-title').textContent = cfg.title;
+            document.getElementById('al-title').style.color = cfg.bc;
+            document.getElementById('al-sub').textContent = cfg.sub;
+            document.getElementById('al-score').textContent = `Window: ${d.window_size || 0}/30`;
+            document.getElementById('s-badge').className = 's-ok s-badge ' + BCLS[cls];
+            document.getElementById('s-badge').textContent = cfg.title;
+        }
+
+        const LOG_MAP = ['le-ok', 'le-sc', 'le-oc', 'le-dg', 'le-sh'];
+        function addLog(d) {
+            const log = document.getElementById('log');
+            const e = document.createElement('div');
+            e.className = 'le ' + LOG_MAP[d.pred_class];
+            e.textContent = `[${d.timestamp}] row=${((d.row_index || 0) + 1).toLocaleString()} | ${CN[d.pred_class]} | idc1=${d.idc_1.toFixed(3)} idc2=${d.idc_2.toFixed(3)} vdc1=${d.vdc_1.toFixed(1)} vdc2=${d.vdc_2.toFixed(1)} | IF=${d.if_score.toFixed(3)}`;
+            log.insertBefore(e, log.firstChild);
+            if (log.children.length > 60) log.lastChild.remove();
+        }
+
+        function onDone(d) {
+            document.getElementById('s-dot').className = 'dot gr';
+            document.getElementById('s-pill').textContent = 'DONE';
+            document.getElementById('b-go').style.display = 'flex';
+            document.getElementById('b-st').style.display = 'none';
+            const e = document.createElement('div');
+            e.className = 'le le-ok';
+            e.style.color = 'var(--blue)'; e.style.fontStyle = 'italic';
+            e.textContent = `Stream complete — ${d.stats?.total?.toLocaleString() || '--'} rows processed.`;
+            document.getElementById('log').insertBefore(e, document.getElementById('log').firstChild);
+        }
+
+        function showToast(title, sub) {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.innerHTML = `
+                <div class="t-icon">⚠️</div>
+                <div>
+                    <div class="t-title">${title}</div>
+                    <div class="t-sub">${sub}</div>
+                </div>
+                <div class="t-cls" onclick="this.parentElement.classList.add('hide'); setTimeout(() => this.parentElement.remove(), 300)">✖</div>
+            `;
+            c.appendChild(t);
+            setTimeout(() => {
+                if (t.parentNode) {
+                    t.classList.add('hide');
+                    setTimeout(() => { if (t.parentNode) t.remove(); }, 300);
+                }
+            }, 6000);
+        }
+    </script>
+</body>
+
+</html>
